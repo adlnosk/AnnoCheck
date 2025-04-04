@@ -1,11 +1,3 @@
-rule get_taxonomy:
-    output:
-        taxon_id=temp(results_dir + "/taxon_id.txt"),
-        lineage=temp(results_dir + "/lineage.txt"),
-        family=temp(results_dir + "/family.txt")
-    shell:
-        "python get_taxonomy.py '{species}'"
-
 rule fasta_validation:
     input:
         fasta=FASTA_INPUT
@@ -32,10 +24,10 @@ rule helixer:
     resources:
         time="96:00:00",
         mem_mb=50000
+    params:
+        helixer_lineage=get_helixer_lineage
     shell:
-        """
-        {PWD}/scripts/helixer.sh {input.fasta} {wildcards.n} {results_dir} {helixer_lineage}
-        """
+        "{PWD}/scripts/helixer.sh {input.fasta} {wildcards.n} {results_dir} {params.helixer_lineage}"
 
 rule create_input_yaml:
     input:
@@ -44,8 +36,8 @@ rule create_input_yaml:
         results_dir + "/egapx/hap_{n}/input.yaml"
     run:
         genome_path = {input}
-        taxid = rules.get_taxonomy.output.taxon_id
-        reads = config["reads"][species]
+        taxid = get_egapx_taxid(wildcards)
+        reads = config["species_data"][species]["reads"]
         input_data = {
             "genome": genome_path,
             "taxid": taxid,

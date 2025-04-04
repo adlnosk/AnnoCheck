@@ -1,8 +1,6 @@
 from Bio import Entrez
 import sys
 
-Entrez.email = "your.email@example.com"  # Replace with your email
-
 def get_taxon_info(species_name):
     # Search for the species in NCBI Taxonomy
     search_handle = Entrez.esearch(db="taxonomy", term=species_name, retmode="xml")

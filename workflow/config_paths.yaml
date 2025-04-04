@@ -1,54 +1,54 @@
-# Species specifications
+###### Species specifications
 species:
   - Dactylis_glomerata
   - Medicago_sativa
 
-helixer_lineage:
-  - land_plant
-
-# Fasta specifications
-nhaps: 4
-fastas_path:
-  Dactylis_glomerata: "/work/project/briefwp3/Adela/Dactylis_glomerata/FINAL/hap_{n}.renamed2.fold.FINAL.noChloronoMito.fasta.gz"
-  Medicago_sativa: "/work/project/briefwp3/Adela/Medicago_sativa/FINAL/renamed2_genome_hap{n}.FINAL.fasta"
-
-# SRA accession numbers from https://www.ncbi.nlm.nih.gov/sra
-reads:
+species_data:
   Dactylis_glomerata:
-    - "SRR11362827"
-    - "SRR11487705"
-    - "SRR12957603"
-    - "SRR12957630"
-    - "SRR16234943"
-    - "SRR22138338"
-    - "SRR22163632"
-    - "SRR27587374"
-    - "SRR30575231"
-    - "SRR6656078"
-    - "SRR6656079"
-    - "SRR6659679"
-    - "SRR6659680"
-    - "SRR7630428"
-  
+    helixer_lineage: "land_plant"
+    busco_lineage: "eudicots"
+    egapx_taxid: 1211456
+    nhaps: 4
+    fastas_path: "/work/project/briefwp3/Adela/Dactylis_glomerata/FINAL/hap_{n}.renamed2.fold.FINAL.noChloronoMito.fasta.gz"
+    reads:
+      - "SRR11362827"
+      - "SRR11487705"
+      - "SRR12957603"
+      - "SRR12957630"
+      - "SRR16234943"
+      - "SRR22138338"
+      - "SRR22163632"
+      - "SRR27587374"
+      - "SRR30575231"
+      - "SRR6656078"
+      - "SRR6656079"
+      - "SRR6659679"
+      - "SRR6659680"
+      - "SRR7630428"
+
   Medicago_sativa:
-    - "SRR27254678"
-    - "SRR27880663"
-    - "SRR28393284"
-    - "SRR28393285"
-    - "SRR28393286"
-    - "SRR28393287"
-    - "SRR28435761"
-    - "SRR28703068"
-    - "SRR28703083"
-    - "SRR28974782"
-    - "SRR29098526"
-    - "SRR29200915"
-    - "SRR30358992"
-    - "SRR31372146"
-    - "SRR31613277"
-    - "SRR31878192"
-    - "SRR32193749"
-    - "SRR32251431"
-    - "SRR32262213"
-
-
+    helixer_lineage: "land_plant"
+    busco_lineage: "fabales"
+    egapx_taxid: 3879
+    nhaps: 4
+    fastas_path: "/work/project/briefwp3/Adela/Medicago_sativa/FINAL/renamed2_genome_hap{n}.FINAL.fasta"
+    reads:
+      - "SRR27254678"
+      - "SRR27880663"
+      - "SRR28393284"
+      - "SRR28393285"
+      - "SRR28393286"
+      - "SRR28393287"
+      - "SRR28435761"
+      - "SRR28703068"
+      - "SRR28703083"
+      - "SRR28974782"
+      - "SRR29098526"
+      - "SRR29200915"
+      - "SRR30358992"
+      - "SRR31372146"
+      - "SRR31613277"
+      - "SRR31878192"
+      - "SRR32193749"
+      - "SRR32251431"
+      - "SRR32262213"

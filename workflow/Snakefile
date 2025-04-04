@@ -4,38 +4,42 @@ print(config['species'])
 import yaml
 import os
 
-SPEC = config["species"]
-nhap = config["nhaps"]
-HAPS = list(range(1, nhap + 1))
-helixer_lineage = config["helixer_lineage"]
 
-# define other inputs
+# Ensure SPEC is always a string
+SPEC = config["species"][0] if isinstance(config["species"], list) else config["species"]
+
+# Precompute haplotype numbers
+species = config["species"]
+SPECIES = list(config["species_data"].keys())  
+HAPS_DICT = {sp: list(range(1, config["species_data"][sp]["nhaps"] + 1)) for sp in SPECIES}
+
+
 def FASTA_INPUT(wildcards): # Generate paths by replacing $n with haplotype numbers
-    fasta_template = config["fastas_path"][wildcards.species]
-    return [fasta_template.replace("$n", str(n)) for n in range(1, config["nhaps"] + 1)]  
+    fasta_template = config["species_data"][wildcards.species]["fastas_path"]
+    nhaps = config["species_data"][wildcards.species]["nhaps"]
+    return [fasta_template.replace("$n", str(n)) for n in range(1, nhaps + 1)]
 
-def get_reads(wildcards): # get SRA accessions or fastq reads for egapx
-    return config["reads"][wildcards.species]
+# taxonomy
+def get_helixer_lineage(wildcards):
+    return config["species_data"][wildcards.species]["helixer_lineage"]
+def get_busco_lineage(wildcards):
+    return config["species_data"][wildcards.species]["busco_lineage"]
+def get_egapx_taxid(wildcards):
+    return config["species_data"][wildcards.species]["egapx_taxid"]
 
 # get dir structure
 PWD = os.getcwd()
 results_dir = PWD + "/../results/{species}"
 
-
 include: 'snakepit/launch_annotations.smk'
-
 
 rule all:
     input:
-        expand(results_dir + "/hap{n}.checked.fasta", n=HAPS, species=SPEC),
-        # produced annotations
-        expand(results_dir + "/helixer/hap_{n}.gff3", n=HAPS, species=SPEC),
-        expand(results_dir + "/egapx/hap_{n}/output/complete.genomic.gtf", n=HAPS, species=SPEC),
-        expand(results_dir + "/repeatmasker/hap{n}/hap{n}.checked.masked.fasta", n=HAPS, species=SPEC),
-        expand(results_dir + "/infernal_rfam/hap_{n}.deoverlapped.checked.gff", n=HAPS, species=SPEC),
-        expand(results_dir + "/tRNAscan/hap_{n}.gff3", n=HAPS, species=SPEC),
-        expand(results_dir + "/RNAmmer/hap_{n}.gff3", n=HAPS, species=SPEC)
-
-
-
+        expand(results_dir + "/hap{n}.checked.fasta", n=HAPS_DICT.get(SPEC, []), species=SPEC),
+        expand(results_dir + "/helixer/hap_{n}.gff3", n=HAPS_DICT.get(SPEC, []), species=SPEC),
+        expand(results_dir + "/egapx/hap_{n}/output/complete.genomic.gtf", n=HAPS_DICT.get(SPEC, []), species=SPEC),
+        expand(results_dir + "/repeatmasker/hap{n}/hap{n}.checked.masked.fasta", n=HAPS_DICT.get(SPEC, []), species=SPEC),
+        expand(results_dir + "/infernal_rfam/hap_{n}.deoverlapped.checked.gff", n=HAPS_DICT.get(SPEC, []), species=SPEC),
+        expand(results_dir + "/tRNAscan/hap_{n}.gff3", n=HAPS_DICT.get(SPEC, []), species=SPEC),
+        expand(results_dir + "/RNAmmer/hap_{n}.gff3", n=HAPS_DICT.get(SPEC, []), species=SPEC)
 
