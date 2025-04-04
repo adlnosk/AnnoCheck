@@ -1,0 +1,41 @@
+configfile: "config_paths.yaml"
+print(config['species'])
+
+import yaml
+import os
+
+SPEC = config["species"]
+nhap = config["nhaps"]
+HAPS = list(range(1, nhap + 1))
+helixer_lineage = config["helixer_lineage"]
+
+# define other inputs
+def FASTA_INPUT(wildcards): # Generate paths by replacing $n with haplotype numbers
+    fasta_template = config["fastas_path"][wildcards.species]
+    return [fasta_template.replace("$n", str(n)) for n in range(1, config["nhaps"] + 1)]  
+
+def get_reads(wildcards): # get SRA accessions or fastq reads for egapx
+    return config["reads"][wildcards.species]
+
+# get dir structure
+PWD = os.getcwd()
+results_dir = PWD + "/../results/{species}"
+
+
+include: 'snakepit/launch_annotations.smk'
+
+
+rule all:
+    input:
+        expand(results_dir + "/hap{n}.checked.fasta", n=HAPS, species=SPEC),
+        # produced annotations
+        expand(results_dir + "/helixer/hap_{n}.gff3", n=HAPS, species=SPEC),
+        expand(results_dir + "/egapx/hap_{n}/output/complete.genomic.gtf", n=HAPS, species=SPEC),
+        expand(results_dir + "/repeatmasker/hap{n}/hap{n}.checked.masked.fasta", n=HAPS, species=SPEC),
+        expand(results_dir + "/infernal_rfam/hap_{n}.deoverlapped.checked.gff", n=HAPS, species=SPEC),
+        expand(results_dir + "/tRNAscan/hap_{n}.gff3", n=HAPS, species=SPEC),
+        expand(results_dir + "/RNAmmer/hap_{n}.gff3", n=HAPS, species=SPEC)
+
+
+
+
