@@ -6,7 +6,7 @@ import os
 
 
 # Ensure SPEC is always a string
-SPEC = config["species"][0] if isinstance(config["species"], list) else config["species"]
+SPEC = config["species"] if isinstance(config["species"], list) else config["species"]
 
 # Precompute haplotype numbers
 species = config["species"]
@@ -32,14 +32,27 @@ PWD = os.getcwd()
 results_dir = PWD + "/../results/{species}"
 
 include: 'snakepit/launch_annotations.smk'
+include: 'snakepit/quality_check_raw.smk'
 
 rule all:
     input:
-        expand(results_dir + "/hap{n}.checked.fasta", n=HAPS_DICT.get(SPEC, []), species=SPEC),
-        expand(results_dir + "/helixer/hap_{n}.gff3", n=HAPS_DICT.get(SPEC, []), species=SPEC),
-        expand(results_dir + "/egapx/hap_{n}/output/complete.genomic.gtf", n=HAPS_DICT.get(SPEC, []), species=SPEC),
-        expand(results_dir + "/repeatmasker/hap{n}/hap{n}.checked.masked.fasta", n=HAPS_DICT.get(SPEC, []), species=SPEC),
-        expand(results_dir + "/infernal_rfam/hap_{n}.deoverlapped.checked.gff", n=HAPS_DICT.get(SPEC, []), species=SPEC),
-        expand(results_dir + "/tRNAscan/hap_{n}.gff3", n=HAPS_DICT.get(SPEC, []), species=SPEC),
-        expand(results_dir + "/RNAmmer/hap_{n}.gff3", n=HAPS_DICT.get(SPEC, []), species=SPEC)
+        [
+            expand(results_dir + path, n=HAPS_DICT.get(species, []), species=species, dataset=["egapx", "helixer"])
+            for species in config["species"]
+            for path in [
+              # annotation files
+                "/hap{n}.checked.fasta",
+                "/helixer/hap_{n}.gff3",
+                "/egapx/hap_{n}/output/complete.genomic.gtf",
+                "/repeatmasker/hap{n}/hap{n}.checked.masked.fasta",
+                "/infernal_rfam/hap_{n}.deoverlapped.checked.gff",
+                "/tRNAscan/hap_{n}.gff3",
+                "/RNAmmer/hap_{n}.gff3",
+              # quality checks raw
+                "/{dataset}/COMPL_hap{n}_summary.txt",
+                "/{dataset}/combined_psauron_scores.csv",
+                "/{dataset}/OMArk/hap{n}/hap{n}.png"
+            ]
+        ]
+
 

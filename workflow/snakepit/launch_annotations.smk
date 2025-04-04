@@ -53,7 +53,8 @@ rule egapx:
     output:
         results_dir + "/egapx/hap_{n}/output/complete.genomic.gtf",
         results_dir + "/egapx/hap_{n}/output/complete.proteins.faa",
-        results_dir + "/egapx/hap_{n}/output/complete.transcripts.fna"
+        results_dir + "/egapx/hap_{n}/output/complete.transcripts.fna",
+        results_dir + "/egapx/hap_{n}/output/complete.cds.fna"
     shell:
         """
         cd {results_dir}/egapx/hap_{wildcards.n};
