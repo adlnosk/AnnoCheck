@@ -36,7 +36,7 @@ The following software modules are required and are included in the Snakemake sc
 
 ## Usage
 ### 1. Configuration
-Modify `config.yaml` to specify input genome files and parameters for annotation.
+Modify `config_path.yaml` to specify input genome files and parameters for annotation.
 
 ### 2. Running the Annotation Workflow
 Run it using:
