@@ -23,6 +23,7 @@ if [ ! -f $rfam_db/Rfam.cm ]; then
     wget ftp://ftp.ebi.ac.uk/pub/databases/Rfam/CURRENT/Rfam.clanin
 fi
 
+cmpress -F $rfam_db/Rfam.cm
 
 # Get total database size (multiply by 2 for both strands)
 size=$(esl-seqstat ${fasta} | grep "Total # residues:" | awk '{print $4}' | awk '{print $1 * 2 / 1000000}')
@@ -35,5 +36,5 @@ cmscan --cpu ${cpus} -Z $size --cut_ga --rfam --nohmmonly --tblout hap_${n}.tblo
 cat hap_${n}.tblout | grep -v " = " > hap_${n}.deoverlapped.tblout
 
 # Create GFF file from tblout
-perl $wd/../../workflow/scripts/tblout2gff.pl --fmt2 --cmscan hap_${n}.deoverlapped.tblout > ${gff_out}
+perl $wd/../../../workflow/scripts/tblout2gff.pl --fmt2 --cmscan hap_${n}.deoverlapped.tblout > ${gff_out}
 
