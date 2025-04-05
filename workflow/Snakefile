@@ -4,7 +4,6 @@ print(config['species'])
 import yaml
 import os
 
-
 # Ensure SPEC is always a string
 SPEC = config["species"] if isinstance(config["species"], list) else config["species"]
 
@@ -13,11 +12,13 @@ species = config["species"]
 SPECIES = list(config["species_data"].keys())  
 HAPS_DICT = {sp: list(range(1, config["species_data"][sp]["nhaps"] + 1)) for sp in SPECIES}
 
-
+    
 def FASTA_INPUT(wildcards): # Generate paths by replacing $n with haplotype numbers
     fasta_template = config["species_data"][wildcards.species]["fastas_path"]
-    nhaps = config["species_data"][wildcards.species]["nhaps"]
-    return [fasta_template.replace("$n", str(n)) for n in range(1, nhaps + 1)]
+    return fasta_template.replace("$n", str(wildcards.n))
+
+def get_reads(wildcards):
+    return config["species_data"][wildcards.species]["reads"]
 
 # taxonomy
 def get_helixer_lineage(wildcards):

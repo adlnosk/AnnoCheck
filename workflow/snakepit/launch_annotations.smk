@@ -4,16 +4,28 @@ rule fasta_validation:
     output:
         checked_fasta=results_dir + "/hap{n}.checked.fasta"
     threads: 5
+    resources:
+        time="00:30:00",
+        mem_mb=10000
+    params:
+        resdir=results_dir
     shell:
         """
-        module load bioinfo/fasta_validator/a7cbc40;
-        fasta_validate {input.fasta}
-        EXIT_CODE=$?
-        if [ $EXIT_CODE -ne 0 ]; then
-            echo "Error: FASTA validation failed with code $EXIT_CODE" >&2
-            exit $EXIT_CODE
+        cd {params.resdir}
+      #fasta_validate - better to run manually, sometimes it cracs  
+        #module load bioinfo/fasta_validator/a7cbc40;
+        #fasta_validate {input.fasta}
+        #EXIT_CODE=$?
+        #if [ $EXIT_CODE -ne 0 ]; then
+        #    echo "Error: FASTA validation failed with code $EXIT_CODE" >&2
+        #    exit $EXIT_CODE
+        #fi
+        if [[ "{input.fasta}" == *.gz ]]; then
+            module load bioinfo/bgzip/1.18
+            bgzip -d -@ {threads} --stdout {input.fasta} | sed '/^>/ s/$/ {wildcards.species}/' > {output.checked_fasta}
+        else
+            cat {input.fasta} | sed '/^>/ s/$/ {wildcards.species}/' > {output.checked_fasta}
         fi
-        bioinfo/bgzip/1.18; bgzip -@ {threads} --stdout {input.fasta} | sed '/^>/ s/$/ {wildcards.species}/' > {output.checked_fasta}
         """
 
 rule helixer:
@@ -25,26 +37,34 @@ rule helixer:
         time="96:00:00",
         mem_mb=50000
     params:
+        resdir=results_dir,
         helixer_lineage=get_helixer_lineage
     shell:
-        "{PWD}/scripts/helixer.sh {input.fasta} {wildcards.n} {results_dir} {params.helixer_lineage}"
+        """
+        cd {params.resdir}/helixer
+        {PWD}/scripts/helixer.sh {input.fasta} {wildcards.n} {params.helixer_lineage}
+        """
 
 rule create_input_yaml:
     input:
         fasta=rules.fasta_validation.output
     output:
         results_dir + "/egapx/hap_{n}/input.yaml"
-    run:
-        genome_path = {input}
-        taxid = get_egapx_taxid(wildcards)
-        reads = config["species_data"][species]["reads"]
-        input_data = {
-            "genome": genome_path,
-            "taxid": taxid,
-            "reads": reads
-        }
-        with open(output[0], "w") as f:
-            yaml.dump(input_data, f, default_flow_style=False)
+    params:
+        taxid=get_egapx_taxid,
+        reads=get_reads,
+        resdir=results_dir
+    shell:
+        """
+        cd {params.resdir}/egapx/hap_{wildcards.n}
+        echo "genome: {input.fasta}" > {output}
+        echo "taxid: {params.taxid}" >> {output}
+        echo "reads:" >> {output}
+
+        for read in {params.reads}; do
+            echo "  - \\"$read\\"" >> {output}
+        done
+        """
 
 rule egapx:
     input:
@@ -55,11 +75,14 @@ rule egapx:
         results_dir + "/egapx/hap_{n}/output/complete.proteins.faa",
         results_dir + "/egapx/hap_{n}/output/complete.transcripts.fna",
         results_dir + "/egapx/hap_{n}/output/complete.cds.fna"
+    params:
+        resdir=results_dir,
+        config=PWD + "/resources/"
     shell:
         """
-        cd {results_dir}/egapx/hap_{wildcards.n};
+        cd {params.resdir}/egapx/hap_{wildcards.n};
         module load bioinfo/EGAPx/0.3.2-alpha
-        egapx.py {input.yaml} -o output -e slurm
+        egapx.py {input.yaml} -o output -e slurm --config-dir {params.config}
         """
 
 rule repeat_modeler:
@@ -71,9 +94,11 @@ rule repeat_modeler:
     resources:
         time="96:00:00",
         mem_mb=50000
+    params:
+        resdir=results_dir
     shell:
         """
-        cd results_dir/repeatmodeler
+        cd {params.resdir}/repeatmodeler
         module load bioinfo/RepeatModeler/2.0.6
         BuildDatabase -name {wildcards.species} {input.fasta}
         RepeatModeler -database {wildcards.species} -threads {threads} -LTRStruct -quick
@@ -89,10 +114,12 @@ rule repeat_masker:
     resources:
         time="24:00:00",
         mem_mb=50000
+    params:
+        resdir=results_dir
     shell:
         """
-        mkdir -p results_dir/repeatmasker/hap{wildcards.n}
-        cd results_dir/repeatmasker
+        mkdir -p {params.resdir}/repeatmasker/hap{wildcards.n}
+        cd {params.resdir}/repeatmasker
         module load devel/python/Python-3.6.3 bioinfo/RepeatMasker/4.1.8
         RepeatMasker -xsmall -gff -pa 4 -q -e ncbi -dir hap{wildcards.n} -norna -lib {input.families} {input.fasta}
         """
@@ -107,10 +134,12 @@ rule infernal_rfam:
         time="96:00:00",
         mem_mb=50000
     params:
-        rfam_db=PWD + "/resources/Rfam_lib/"
+        rfam_db=PWD + "/resources/Rfam_lib/",
+        resdir=results_dir
     shell:
         """
-        {PWD}/scripts/infernal.sh {input.fasta} {output.gff_out} {results_dir}/infernal_rfam/ {wildcards.n} {params.rfam_db} {threads}
+        cd {params.resdir}/infernal_rfam
+        {PWD}/scripts/infernal.sh {input.fasta} {output.gff_out} {params.resdir}/infernal_rfam/ {wildcards.n} {params.rfam_db} {threads}
         """
 
 rule manage_rfam_ids:
@@ -119,9 +148,12 @@ rule manage_rfam_ids:
         dict = PWD + "/resources/ncRNA_dictionary.txt"
     output:
         gff_out = results_dir + "/infernal_rfam/hap_{n}.deoverlapped.checked.gff"
+    params:
+        resdir=results_dir
     shell:
         """
-        {PWD}/scripts/manage_ids.sh {input.inf} {input.dict} {output.gff_out} {results_dir}/infernal_rfam/ {wildcards.n}
+        cd {params.resdir}
+        {PWD}/scripts/manage_ids.sh {input.inf} {input.dict} {output.gff_out} {params.resdir}/infernal_rfam/ {wildcards.n}
         """
 
 rule trnascan:
@@ -131,10 +163,14 @@ rule trnascan:
         gff_out=results_dir + "/tRNAscan/hap_{n}.gff3"
     threads: 4
     params:
-        prefix="hap{wildcards.n}"
+        prefix="hap{wildcards.n}",
+        resdir=results_dir
+    resources:
+        time="24:00:00",
+        mem_mb=10000
     shell:
         """
-        cd results_dir/tRNAscan/
+        cd {params.resdir}/tRNAscan/
         module load bioinfo/tRNAscan-SE/2.0.12
         tRNAscan-SE --gff {output.gff_out} --thread {threads} -o {params.prefix} -m {params.prefix}.stats -p {params.prefix} -d -Q -- {input.fasta}
         """
@@ -145,11 +181,15 @@ rule rnammer:
     output:
         gff_out=results_dir + "/RNAmmer/hap_{n}.gff3"
     threads: 4
+    resources:
+        time="24:00:00",
+        mem_mb=10000
     params:
-        prefix="hap{wildcards.n}"
+        prefix="hap{wildcards.n}",
+        resdir=results_dir
     shell:
         """
-        cd results_dir/RNAmmer/
+        cd {params.resdir}/RNAmmer/
         perl -MCPAN -e 'install XML::Simple'
         module load bioinfo/RNAmmer/1.2
         rnammer -gff {params.prefix}.gff -S euk -m lsu,ssu,tsu -f {params.prefix}.fa -h {params.prefix}.hmm -multi < {input.fasta}

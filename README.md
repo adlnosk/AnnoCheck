@@ -53,7 +53,7 @@ The next step will introduce quality checks with:
 - MultiQC (Summarizing QC reports)
 
 ## Input Requirements
-- The input must be a **bgzipped fasta** (tested on haplotype-level de novo assemblies).
+- The input is a **fasta** or **fasta.gz** (tested on haplotype-level de novo assemblies).
 
 ## Output
 - Annotated genome files and quality control reports will be generated in the `results/` directory.
