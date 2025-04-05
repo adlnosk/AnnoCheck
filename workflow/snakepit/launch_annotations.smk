@@ -1,3 +1,6 @@
+#module load bioinfo/fasta_validator/a7cbc40;
+#fasta_validate {input.fasta}
+
 rule fasta_validation:
     input:
         fasta=FASTA_INPUT
@@ -12,14 +15,6 @@ rule fasta_validation:
     shell:
         """
         cd {params.resdir}
-      #fasta_validate - better to run manually, sometimes it cracs  
-        #module load bioinfo/fasta_validator/a7cbc40;
-        #fasta_validate {input.fasta}
-        #EXIT_CODE=$?
-        #if [ $EXIT_CODE -ne 0 ]; then
-        #    echo "Error: FASTA validation failed with code $EXIT_CODE" >&2
-        #    exit $EXIT_CODE
-        #fi
         if [[ "{input.fasta}" == *.gz ]]; then
             module load bioinfo/bgzip/1.18
             bgzip -d -@ {threads} --stdout {input.fasta} | sed '/^>/ s/$/ {wildcards.species}/' > {output.checked_fasta}
@@ -38,11 +33,12 @@ rule helixer:
         mem_mb=50000
     params:
         resdir=results_dir,
-        helixer_lineage=get_helixer_lineage
+        helixer_lineage=get_helixer_lineage,
+        resources=results_dir + "../workflow/resources"
     shell:
         """
         cd {params.resdir}/helixer
-        {PWD}/scripts/helixer.sh {input.fasta} {wildcards.n} {params.helixer_lineage}
+        {PWD}/scripts/helixer.sh {input.fasta} {wildcards.n} {params.helixer_lineage} {params.resources}
         """
 
 rule create_input_yaml:
@@ -129,7 +125,7 @@ rule infernal_rfam:
         fasta=rules.fasta_validation.output
     output:
         gff_out=results_dir + "/infernal_rfam/hap_{n}.deoverlapped.gff"
-    threads: 16
+    threads: 8
     resources:
         time="96:00:00",
         mem_mb=50000
@@ -183,7 +179,7 @@ rule rnammer:
     threads: 4
     resources:
         time="24:00:00",
-        mem_mb=10000
+        mem_mb=20000
     params:
         prefix="hap{wildcards.n}",
         resdir=results_dir
