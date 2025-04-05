@@ -81,7 +81,7 @@ rule egapx:
     shell:
         """
         cd {params.resdir}/egapx/hap_{wildcards.n};
-        module load bioinfo/EGAPx/0.3.2-alpha
+        module load devel/python/Python-3.11.1 containers/singularity/3.9.9 bioinfo/Nextflow/24.10.0 devel/java/17.0.6 bioinfo/EGAPx/0.3.2-alpha
         egapx.py {input.yaml} -o output -e slurm --config-dir {params.config}
         """
 
