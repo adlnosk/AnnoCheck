@@ -120,22 +120,50 @@ rule repeat_masker:
         RepeatMasker -xsmall -gff -pa 4 -q -e ncbi -dir hap{wildcards.n} -norna -lib {input.families} {input.fasta}
         """
 
-rule infernal_rfam:
-    input:
-        fasta=rules.fasta_validation.output
+rule download_rfam_db:
     output:
-        gff_out=results_dir + "/infernal_rfam/hap_{n}.deoverlapped.gff"
-    threads: 8
-    resources:
-        time="96:00:00",
-        mem_mb=50000
-    params:
-        rfam_db=PWD + "/resources/Rfam_lib/",
-        resdir=results_dir
+        cm = PWD + "/resources/Rfam_lib/Rfam.cm",
+        clanin = PWD + "/resources/Rfam_lib/Rfam.clanin",
+        cmsq = PWD + "/resources/Rfam_lib/Rfam.cm.i1f"
     shell:
         """
-        cd {params.resdir}/infernal_rfam
-        {PWD}/scripts/infernal.sh {input.fasta} {output.gff_out} {params.resdir}/infernal_rfam/ {wildcards.n} {params.rfam_db} {threads}
+        module load bioinfo/Infernal/1.1.4
+        mkdir -p {PWD}/resources/Rfam_lib
+        cd {params.rfam_db}
+        if [ ! -f Rfam.cm ]; then
+            wget ftp://ftp.ebi.ac.uk/pub/databases/Rfam/CURRENT/Rfam.cm.gz
+            gunzip Rfam.cm.gz
+        fi
+        if [ ! -f Rfam.clanin ]; then
+            wget ftp://ftp.ebi.ac.uk/pub/databases/Rfam/CURRENT/Rfam.clanin
+        fi
+        cmpress -F Rfam.cm
+        """
+
+rule infernal_rfam:
+    input:
+        fasta = rules.fasta_validation.output,
+        cm = rules.download_rfam_db.output.cm,
+        clanin = rules.download_rfam_db.output.clanin
+    output:
+        gff_out = results_dir + "/infernal_rfam/hap_{n}.deoverlapped.gff"
+    threads: 8
+    resources:
+        time = "96:00:00",
+        mem_mb = 50000
+    params:
+        outdir = results_dir + "/infernal_rfam",
+        tbl2gff = PWD + "/workflow/scripts/tblout2gff.pl"
+    shell:
+        """
+        module load bioinfo/Infernal/1.1.4
+        mkdir -p {params.outdir}
+        cd {params.outdir}
+        size=$(esl-seqstat {input.fasta} | awk '/Total # residues:/ {{print int($NF * 2 / 1000000)}}')
+        cmscan --cpu {threads} -Z $size --cut_ga --rfam --nohmmonly --tblout hap_{wildcards.n}.tblout --fmt 2 \
+            --clanin {input.clanin} {input.cm} {input.fasta} > hap_{wildcards.n}.cmscan        
+        grep -v " = " hap_{wildcards.n}.tblout > hap_{wildcards.n}.deoverlapped.tblout # Remove overlapping hits
+        perl {params.tbl2gff} --fmt2 --cmscan hap_{wildcards.n}.deoverlapped.tblout > {output.gff_out} # Convert to GFF
         """
 
 rule manage_rfam_ids:
@@ -179,7 +207,7 @@ rule rnammer:
     threads: 4
     resources:
         time="24:00:00",
-        mem_mb=20000
+        mem_mb=50000
     params:
         prefix="hap{wildcards.n}",
         resdir=results_dir

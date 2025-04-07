@@ -13,7 +13,7 @@ rule prepare_files:
     shell:
         """
         cd {params.resdir}/helixer/
-        module load bioinfo/AGAT/1.2.0
+        module load devel/Miniconda/Miniconda3 bioinfo/AGAT/1.2.0
         agat_sp_extract_sequences.pl --gff {input.helixer} -f {input.fasta} -p -o {output.helixer_protein}
         module load bioinfo/gffread/0.12.6
         gffread -x {output.helixer_cds} -g {input.fasta} {input.helixer}
@@ -37,7 +37,7 @@ rule compleasm_raw:
         cd {params.resdir}/{wildcards.dataset}
         module load devel/python/Python-3.11.1 bioinfo/compleasm/0.2.5
         compleasm.py download {params.lineage}
-        compleasm.py protein -a {input.protein_fasta} -o {output.summary} -l {params.lineage} -L /mb_downloads/{params.lineage}_odb10 --odb 10 -t {threads}
+        compleasm.py protein -p {input.protein_fasta} -o {output.summary} -l {params.lineage} -L mb_downloads/ -t {threads}
         """
 
 rule psauron_raw:
@@ -98,8 +98,8 @@ rule omark_raw:
     shell:
         """
         module load devel/Miniconda/Miniconda3 bioinfo/OMArk/0.3.0
-        mkdir {params.db}
-        omamer search --db /usr/local/bioinfo/src/OMArk/example_on_cluster/LUCA.h5 --query {input.protein_fasta} --out {params.db}
+        mkdir -p {params.db}
+        omamer search --db /usr/local/bioinfo/src/OMArk/example_on_cluster/LUCA.h5 --query {input.protein_fasta} --out {params.db}/search.omamer
         omark -f {params.db}/search.omamer -d /usr/local/bioinfo/src/OMArk/example_on_cluster/LUCA.h -o {params.db}
         plot_all_results.py -i {params.db} -o {output.plot}
         """
