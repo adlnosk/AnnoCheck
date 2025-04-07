@@ -70,7 +70,8 @@ rule egapx:
         results_dir + "/egapx/hap_{n}/output/complete.genomic.gtf",
         results_dir + "/egapx/hap_{n}/output/complete.proteins.faa",
         results_dir + "/egapx/hap_{n}/output/complete.transcripts.fna",
-        results_dir + "/egapx/hap_{n}/output/complete.cds.fna"
+        results_dir + "/egapx/hap_{n}/output/complete.cds.fna",
+        results_dir + "/egapx/hap_{n}/output/run.trace.txt"
     params:
         resdir=results_dir,
         config=PWD + "/resources/"
@@ -159,7 +160,7 @@ rule infernal_rfam:
         module load bioinfo/Infernal/1.1.4
         mkdir -p {params.outdir}
         cd {params.outdir}
-        size=$(esl-seqstat {input.fasta} | awk '/Total # residues:/ {{print int($NF * 2 / 1000000)}}')
+        size=$(esl-seqstat --dna {input.fasta} | awk '/Total # residues:/ {{print int($NF * 2 / 1000000)}}')
         cmscan --cpu {threads} -Z $size --cut_ga --rfam --nohmmonly --tblout hap_{wildcards.n}.tblout --fmt 2 \
             --clanin {input.clanin} {input.cm} {input.fasta} > hap_{wildcards.n}.cmscan        
         grep -v " = " hap_{wildcards.n}.tblout > hap_{wildcards.n}.deoverlapped.tblout # Remove overlapping hits
@@ -207,13 +208,14 @@ rule rnammer:
     threads: 4
     resources:
         time="24:00:00",
-        mem_mb=50000
+        mem_mb=100000
     params:
         prefix="hap{wildcards.n}",
         resdir=results_dir
     shell:
         """
-        cd {params.resdir}/RNAmmer/
+        mkdir {params.resdir}/RNAmmer/hap{wildcards.n}
+        cd {params.resdir}/RNAmmer/hap{wildcards.n}
         perl -MCPAN -e 'install XML::Simple'
         module load bioinfo/RNAmmer/1.2
         rnammer -gff {params.prefix}.gff -S euk -m lsu,ssu,tsu -f {params.prefix}.fa -h {params.prefix}.hmm -multi < {input.fasta}

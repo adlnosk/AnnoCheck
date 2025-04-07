@@ -4,6 +4,10 @@ AnnoCheck is a Snakemake-based workflow designed for comprehensive genome annota
 **Soon** will be included a quality check subworflow.
 **After** will add combining and filtration steps to produce the final annotation files.
 
+## Example:
+
+DAG of Snakemake rules:
+<img src="workflow/dag.png" width="500"/>
 
 ## Installation
 
@@ -36,24 +40,34 @@ The following software modules are required and are included in the Snakemake sc
 
 ## Usage
 ### 1. Configuration
-Modify `config_path.yaml` to specify input genome files and parameters for annotation.
+Modify `workflow/config_path.yaml` to specify input genome files and parameters for annotation.
 
-### 2. Running the Annotation Workflow
+### 2. Running the Workflow
 Run it using:
 ```bash
 cd workflow
 sbatch run_snake.sh  # (By default, it runs with --dry-run. Remove the flag after the first check.)
 ```
 
-### 3. Quality Control Subworkflow (Upcoming)
-The next step will introduce quality checks with:
-- BUSCO (Benchmarking Universal Single-Copy Orthologs)
-- PSAURON (Annotation assessment tool)
-- OMArk (Genome annotation evaluation)
-- MultiQC (Summarizing QC reports)
+### 3. Subworkflows
+Stored in workflow/snakepit are subworkflows:
+1. launch_annotations.smk
+	- protein-coding genes: helixer, egapx
+	- repeat masking (RepeatModeler + RepeatMasker)
+	- ncRNA - Infernal, RNAmmer, tRNAscan
+2. quality_check_raw.smk
+	- RNA alignment summary
+	- Compleasm
+	- PSAURON (Annotation assessment tool)
+	- OMArk (Genome annotation evaluation)
+	- (Upcoming) MultiQC (Summarizing QC reports)
 
 ## Input Requirements
-- The input is a **fasta** or **fasta.gz** (tested on haplotype-level de novo assemblies).
+Specified in workflow/config_path.yaml:
+	- **fasta** or **fasta.gz** (tested on haplotype-level de novo assemblies)
+	- SRA/fastq/command - public RNA dataset
+	- species-related specifications
+Included in github repository - `workflow/resources`
 
 ## Output
 - Annotated genome files and quality control reports will be generated in the `results/` directory.

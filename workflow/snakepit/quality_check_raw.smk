@@ -1,22 +1,60 @@
-# Snakefile to launch and combine quality checks
-
 rule prepare_files:
-    # Extract proteins from helixer for input to BUSCO and Egapx
     input:
-        fasta=results_dir + "/hap{n}.checked.fasta",
-        helixer=results_dir + "/helixer/hap_{n}.gff3"
+        fasta = results_dir + "/hap{n}.checked.fasta",
+        helixer = results_dir + "/helixer/hap_{n}.gff3"
     output:
-        helixer_protein=results_dir + "/helixer/hap_{n}.helixer.protein.faa",
-        helixer_cds=results_dir + "/helixer/hap_{n}.helixer.CDS.fna"
+        helixer_protein = results_dir + "/helixer/hap_{n}.helixer.protein.faa",
+        helixer_cds = results_dir + "/helixer/hap_{n}.helixer.CDS.fna"
     params:
-        resdir=results_dir
+        resdir = results_dir
     shell:
         """
         cd {params.resdir}/helixer/
+
         module load devel/Miniconda/Miniconda3 bioinfo/AGAT/1.2.0
         agat_sp_extract_sequences.pl --gff {input.helixer} -f {input.fasta} -p -o {output.helixer_protein}
+
         module load bioinfo/gffread/0.12.6
         gffread -x {output.helixer_cds} -g {input.fasta} {input.helixer}
+        """
+
+rule summarize_star_logs:
+    input:
+        trace=results_dir + "/egapx/hap_{n}/output/run.trace.txt"
+    output:
+        summary=results_dir + "/egapx/hap_{n}/STAR_logs/rna_summary.txt"
+    params:
+        resdir=results_dir
+    threads: 1
+    shell:
+        """
+        stardir="{params.resdir}/egapx/hap_{wildcards.n}/STAR_logs"
+        workdir="{params.resdir}/egapx/hap_{wildcards.n}/work"
+        mkdir -p "$stardir"
+        grep "egapx:rnaseq_short_plane:star:run_star" {input.trace} | cut -f2 > "$stardir/wd.list"
+        while read id; do find "$workdir/${{id}}"* -name "*Log.final.out" -exec cp {{}} "$stardir" \;; done < "$stardir/wd.list"
+        # Summary
+        declare -A sum
+        fields=(
+            "Number of input reads"
+            "Uniquely mapped reads number"
+            "Number of reads mapped to multiple loci"
+            "Number of reads unmapped: too many mismatches"
+            "Number of reads unmapped: other"
+            "Number of chimeric reads"
+        )
+        for f in "$stardir"/*Log.final.out; do
+            awk -F'|' '{{{{gsub(/^ +| +$/, "", $1); gsub(/^ +| +$/, "", $2); print $1, $2}}}}' "$f" |
+            while read key val; do
+                for fkey in "${{fields[@]}}"; do
+                    [[ "$key" == "$fkey" ]] && ((sum["$key"] += val))
+                done
+            done
+        done
+        {{
+            echo "RNA Summary (hap {wildcards.n}):"
+            for k in "${{fields[@]}}"; do printf "%-50s %'15d\\n" "$k" "${{sum[$k]}}"; done
+        }} > {output.summary}
         """
 
 rule compleasm_raw:
@@ -37,7 +75,8 @@ rule compleasm_raw:
         cd {params.resdir}/{wildcards.dataset}
         module load devel/python/Python-3.11.1 bioinfo/compleasm/0.2.5
         compleasm.py download {params.lineage}
-        compleasm.py protein -p {input.protein_fasta} -o {output.summary} -l {params.lineage} -L mb_downloads/ -t {threads}
+        compleasm.py protein -p {input.protein_fasta} -o {params.resdir}/{wildcards.dataset}/COMPL_hap{wildcards.n} -l {params.lineage} -L mb_downloads/ -t {threads}
+        ln -s {params.resdir}/{wildcards.dataset}/COMPL_hap{wildcards.n}/summary.txt {output.summary} 
         """
 
 rule psauron_raw:
@@ -94,13 +133,15 @@ rule omark_raw:
     params:
         db=results_dir + "/{dataset}/OMArk/hap{n}"
     resources:
-        mem_mb=10000
+        mem_mb=50000
     shell:
         """
-        module load devel/Miniconda/Miniconda3 bioinfo/OMArk/0.3.0
+        module load devel/Miniconda/Miniconda3
+        module load bioinfo/OMArk/0.3.0
         mkdir -p {params.db}
+        cd {params.db}
         omamer search --db /usr/local/bioinfo/src/OMArk/example_on_cluster/LUCA.h5 --query {input.protein_fasta} --out {params.db}/search.omamer
-        omark -f {params.db}/search.omamer -d /usr/local/bioinfo/src/OMArk/example_on_cluster/LUCA.h -o {params.db}
+        omark -f {params.db}/search.omamer -d /usr/local/bioinfo/src/OMArk/example_on_cluster/LUCA.h5 -o {params.db} -r family
         plot_all_results.py -i {params.db} -o {output.plot}
         """
 
