@@ -188,7 +188,6 @@ rule trnascan:
         gff_out=results_dir + "/tRNAscan/hap_{n}.gff3"
     threads: 4
     params:
-        prefix="hap{wildcards.n}",
         resdir=results_dir
     resources:
         time="24:00:00",
@@ -197,7 +196,7 @@ rule trnascan:
         """
         cd {params.resdir}/tRNAscan/
         module load bioinfo/tRNAscan-SE/2.0.12
-        tRNAscan-SE --gff {output.gff_out} --thread {threads} -o {params.prefix} -m {params.prefix}.stats -p {params.prefix} -d -Q -- {input.fasta}
+        tRNAscan-SE --gff {output.gff_out} --thread {threads} -o hap{wildcards.n} -m hap{wildcards.n}.stats -p hap{wildcards.n} -d -Q -- {input.fasta}
         """
 
 rule rnammer:
@@ -210,16 +209,15 @@ rule rnammer:
         time="24:00:00",
         mem_mb=100000
     params:
-        prefix="hap{wildcards.n}",
         resdir=results_dir
     shell:
         """
-        mkdir {params.resdir}/RNAmmer/hap{wildcards.n}
+        mkdir -p {params.resdir}/RNAmmer/hap{wildcards.n}
         cd {params.resdir}/RNAmmer/hap{wildcards.n}
         perl -MCPAN -e 'install XML::Simple'
         module load bioinfo/RNAmmer/1.2
-        rnammer -gff {params.prefix}.gff -S euk -m lsu,ssu,tsu -f {params.prefix}.fa -h {params.prefix}.hmm -multi < {input.fasta}
-        less {params.prefix}.gff | sed 's/[[:space:]]*$//' | sort -k1,1 -k4,4n -k5,5n > temp
+        rnammer -gff hap{wildcards.n}.gff -S euk -m lsu,ssu,tsu -f hap{wildcards.n}.fa -h hap{wildcards.n}.hmm -multi < {input.fasta}
+        less hap{wildcards.n}.gff | sed 's/[[:space:]]*$//' | sort -k1,1 -k4,4n -k5,5n > temp
         echo '##gff-version 3' > temp2
         less temp | awk -F "\t" '{{print $1,$2,"rRNA",$4,$5,$6,$7,$8,"ID=rRNA_"$1"_"$4"_"$5";Parent=gene_"$1"_"$4"_"$5";type="$9}}' OFS='\t' >> temp2
         less temp | awk -F "\t" '{{print $1,$2,"gene",$4,$5,$6,$7,$8,"ID=gene_"$1"_"$4"_"$5";type="$3}}' OFS='\t' >> temp2

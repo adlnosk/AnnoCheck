@@ -18,13 +18,14 @@ rule prepare_files:
         gffread -x {output.helixer_cds} -g {input.fasta} {input.helixer}
         """
 
+
 rule summarize_star_logs:
     input:
-        trace=results_dir + "/egapx/hap_{n}/output/run.trace.txt"
+        trace = results_dir + "/egapx/hap_{n}/output/run.trace.txt"
     output:
-        summary=results_dir + "/egapx/hap_{n}/STAR_logs/rna_summary.txt"
+        summary = results_dir + "/egapx/hap_{n}/STAR_logs/rna_summary.txt"
     params:
-        resdir=results_dir
+        resdir = results_dir
     threads: 1
     shell:
         """
@@ -32,8 +33,9 @@ rule summarize_star_logs:
         workdir="{params.resdir}/egapx/hap_{wildcards.n}/work"
         mkdir -p "$stardir"
         grep "egapx:rnaseq_short_plane:star:run_star" {input.trace} | cut -f2 > "$stardir/wd.list"
-        while read id; do find "$workdir/${{id}}"* -name "*Log.final.out" -exec cp {{}} "$stardir" \;; done < "$stardir/wd.list"
-        # Summary
+        while read id; do
+            grep -rl "Log.final.out" "$workdir/${{id}}"* | grep "Log.final.out" | xargs -I{{}} cp {{}} "$stardir"
+        done < "$stardir/wd.list"
         declare -A sum
         fields=(
             "Number of input reads"
@@ -44,7 +46,7 @@ rule summarize_star_logs:
             "Number of chimeric reads"
         )
         for f in "$stardir"/*Log.final.out; do
-            awk -F'|' '{{{{gsub(/^ +| +$/, "", $1); gsub(/^ +| +$/, "", $2); print $1, $2}}}}' "$f" |
+            awk -F'|' '{{ gsub(/^ +| +$/, "", $1); gsub(/^ +| +$/, "", $2); print $1, $2 }}' "$f" |
             while read key val; do
                 for fkey in "${{fields[@]}}"; do
                     [[ "$key" == "$fkey" ]] && ((sum["$key"] += val))
@@ -53,7 +55,9 @@ rule summarize_star_logs:
         done
         {{
             echo "RNA Summary (hap {wildcards.n}):"
-            for k in "${{fields[@]}}"; do printf "%-50s %'15d\\n" "$k" "${{sum[$k]}}"; done
+            for k in "${{fields[@]}}"; do
+                printf "%-50s %'15d\\n" "$k" "${{sum[$k]}}"
+            done
         }} > {output.summary}
         """
 
