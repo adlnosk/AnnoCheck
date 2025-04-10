@@ -5,6 +5,8 @@ rule prepare_files:
     output:
         helixer_protein = results_dir + "/helixer/hap_{n}.helixer.protein.faa",
         helixer_cds = results_dir + "/helixer/hap_{n}.helixer.CDS.fna"
+    resources:
+        mem_mb=10000
     params:
         resdir = results_dir
     shell:
@@ -149,5 +151,30 @@ rule omark_raw:
         plot_all_results.py -i {params.db} -o {output.plot}
         """
 
+rule multiqc_raw:
+    input:
+        star_logs = results_dir + "/egapx/hap_{n}/STAR_logs/",
+        compl_summary = results_dir + "/{dataset}/COMPL_hap{n}_summary.txt",
+        psa_summary = results_dir + "/{dataset}/PSAURON_hap{n}_summary.csv",
+        omark_summary = results_dir + "/{dataset}/OMArk/hap{n}/
+    output:
+        multiqc = results_dir + "/MultiQC_raw/multiqc_report.html",
+        star = results_dir + "/MultiQC_raw/STAR_logs/multiqc_report.html"
+    params:
+        resdir = results_dir,
+        multiqc_inputs = directory(results_dir + "/MultiQC_raw/")
+    threads: 1
+    shell:
+        """
+        mkdir -p {params.multiqc_inputs}
+        cd {params.multiqc_inputs}
+        cp -r {input.star_logs} {output.multiqc_inputs}/STAR_logs
+        module load bioinfo/MultiQC/1.27.1
+        multiqc {output.multiqc_inputs}/STAR_logs
+        cp {input.compl_summary} {output.multiqc_inputs}/
+        cp {input.psa_summary} {output.multiqc_inputs}/
+        cp {input.omark_summary} {output.multiqc_inputs}/
+        multiqc .
+        """
 
 

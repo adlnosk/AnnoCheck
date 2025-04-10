@@ -147,14 +147,14 @@ rule infernal_rfam:
         cm = rules.download_rfam_db.output.cm,
         clanin = rules.download_rfam_db.output.clanin
     output:
-        gff_out = results_dir + "/infernal_rfam/hap_{n}.deoverlapped.gff"
+        gff_out = results_dir + "/infernal_rfam/hap_{n}.deoverlapped.tblout"
     threads: 8
     resources:
         time = "96:00:00",
         mem_mb = 50000
     params:
         outdir = results_dir + "/infernal_rfam",
-        tbl2gff = PWD + "/workflow/scripts/tblout2gff.pl"
+        tbl2gff = PWD + "/scripts/tblout2gff.pl"
     shell:
         """
         module load bioinfo/Infernal/1.1.4
@@ -164,7 +164,20 @@ rule infernal_rfam:
         cmscan --cpu {threads} -Z $size --cut_ga --rfam --nohmmonly --tblout hap_{wildcards.n}.tblout --fmt 2 \
             --clanin {input.clanin} {input.cm} {input.fasta} > hap_{wildcards.n}.cmscan        
         grep -v " = " hap_{wildcards.n}.tblout > hap_{wildcards.n}.deoverlapped.tblout # Remove overlapping hits
-        perl {params.tbl2gff} --fmt2 --cmscan hap_{wildcards.n}.deoverlapped.tblout > {output.gff_out} # Convert to GFF
+        """
+
+rule infernal_gff:
+    input:
+        tbl_out = results_dir + "/infernal_rfam/hap_{n}.deoverlapped.tblout"
+    output:
+        gff_out = results_dir + "/infernal_rfam/hap_{n}.deoverlapped.gff"
+    resources:
+        mem_mb = 5000
+    params:
+        tbl2gff = PWD + "/scripts/tblout2gff.pl"        
+    shell:
+        """
+        perl {params.tbl2gff} --fmt2 --cmscan {input.tbl_out} > {output.gff_out} # Convert to GFF
         """
 
 rule manage_rfam_ids:

@@ -53,9 +53,9 @@ rule all:
                 "/egapx/hap_{n}/STAR_logs/rna_summary.txt",
                 "/{dataset}/COMPL_hap{n}_summary.txt",
                 "/{dataset}/combined_psauron_scores.csv",
-                "/{dataset}/OMArk/hap{n}/hap{n}.png"
+                "/{dataset}/OMArk/hap{n}/hap{n}.png",
+                "/MultiQC_raw/multiqc_report.html"
             ]
         ]
-
 
 
