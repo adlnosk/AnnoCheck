@@ -106,7 +106,7 @@ rule repeat_masker:
         fasta=rules.fasta_validation.output,
         families=results_dir + "/repeatmodeler/{species}-families.fa"
     output:
-        masked_fasta=results_dir + "/repeatmasker/hap{n}/hap{n}.checked.masked.fasta"
+        masked_fasta=results_dir + "/repeatmasker/hap{n}/hap{n}.checked.fasta.masked"
     threads: 16
     resources:
         time="24:00:00",

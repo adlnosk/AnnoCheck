@@ -33,7 +33,7 @@ rule summarize_star_logs:
         """
         stardir="{params.resdir}/egapx/hap_{wildcards.n}/STAR_logs"
         workdir="{params.resdir}/egapx/hap_{wildcards.n}/work"
-        mkdir -p "$stardir"
+        mkdir -p {params.resdir}/egapx/hap_{wildcards.n}/STAR_logs
         grep "egapx:rnaseq_short_plane:star:run_star" {input.trace} | cut -f2 > "$stardir/wd.list"
         while read id; do
             grep -rl "Log.final.out" "$workdir/${{id}}"* | grep "Log.final.out" | xargs -I{{}} cp {{}} "$stardir"
@@ -61,6 +61,8 @@ rule summarize_star_logs:
                 printf "%-50s %'15d\\n" "$k" "${{sum[$k]}}"
             done
         }} > {output.summary}
+        module load bioinfo/MultiQC/1.27.1
+        multiqc {params.resdir}/egapx/hap_{wildcards.n}/STAR_logs
         """
 
 rule compleasm_raw:
@@ -135,7 +137,8 @@ rule omark_raw:
             results_dir + "/{dataset}/" + 
             ("hap_{n}/output/complete.proteins.faa" if wildcards.dataset == "egapx" else "hap_{n}.helixer.protein.faa")
     output:
-        plot=results_dir + "/{dataset}/OMArk/hap{n}/hap{n}.png"
+        plot=results_dir + "/{dataset}/OMArk/hap{n}/hap{n}.png",
+        summary=results_dir + "/{dataset}/OMArk/hap{n}/search_detailed_summary.txt"
     params:
         db=results_dir + "/{dataset}/OMArk/hap{n}"
     resources:
@@ -153,13 +156,11 @@ rule omark_raw:
 
 rule multiqc_raw:
     input:
-        star_logs = results_dir + "/egapx/hap_{n}/STAR_logs/",
-        compl_summary = results_dir + "/{dataset}/COMPL_hap{n}_summary.txt",
-        psa_summary = results_dir + "/{dataset}/PSAURON_hap{n}_summary.csv",
-        omark_summary = results_dir + "/{dataset}/OMArk/hap{n}/
+        compl_summary = lambda wildcards: expand(results_dir + "/{dataset}/COMPL_hap{n}_summary.txt", species=SPEC, dataset=["egapx", "helixer"], n=HAPS_DICT[wildcards.species]),
+        psa_summary = lambda wildcards: expand(results_dir + "/{dataset}/PSAURON_hap{n}_summary.csv", species=SPEC, dataset=["egapx", "helixer"], n=HAPS_DICT[wildcards.species]),
+        omark_summary = lambda wildcards: expand(results_dir + "/{dataset}/OMArk/hap{n}/search_detailed_summary.txt", species=SPEC, dataset=["egapx", "helixer"], n=HAPS_DICT[wildcards.species])
     output:
-        multiqc = results_dir + "/MultiQC_raw/multiqc_report.html",
-        star = results_dir + "/MultiQC_raw/STAR_logs/multiqc_report.html"
+        multiqc = results_dir + "/MultiQC_raw/multiqc_report.html"
     params:
         resdir = results_dir,
         multiqc_inputs = directory(results_dir + "/MultiQC_raw/")
@@ -168,13 +169,10 @@ rule multiqc_raw:
         """
         mkdir -p {params.multiqc_inputs}
         cd {params.multiqc_inputs}
-        cp -r {input.star_logs} {output.multiqc_inputs}/STAR_logs
+        cp {input.compl_summary} {params.multiqc_inputs}/
+        cp {input.psa_summary} {params.multiqc_inputs}/
+        cp {input.omark_summary} {params.multiqc_inputs}/
         module load bioinfo/MultiQC/1.27.1
-        multiqc {output.multiqc_inputs}/STAR_logs
-        cp {input.compl_summary} {output.multiqc_inputs}/
-        cp {input.psa_summary} {output.multiqc_inputs}/
-        cp {input.omark_summary} {output.multiqc_inputs}/
-        multiqc .
+        multiqc {params.multiqc_inputs}
+        cp {params.multiqc_inputs}/multiqc_report.html {output.multiqc}
         """
-
-

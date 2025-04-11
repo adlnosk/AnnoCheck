@@ -45,7 +45,7 @@ rule all:
                 "/hap{n}.checked.fasta",
                 "/helixer/hap_{n}.gff3",
                 "/egapx/hap_{n}/output/complete.genomic.gtf",
-                "/repeatmasker/hap{n}/hap{n}.checked.masked.fasta",
+                "/repeatmasker/hap{n}/hap{n}.checked.fasta.masked",
                 "/infernal_rfam/hap_{n}.deoverlapped.checked.gff",
                 "/tRNAscan/hap_{n}.gff3",
                 "/RNAmmer/hap_{n}.gff3",

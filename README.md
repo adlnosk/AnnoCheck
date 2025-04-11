@@ -56,11 +56,11 @@ Stored in workflow/snakepit are subworkflows:
 	- repeat masking (RepeatModeler + RepeatMasker)
 	- ncRNA - Infernal, RNAmmer, tRNAscan
 2. quality_check_raw.smk
-	- RNA alignment summary
+	- RNA alignment summary -> MultiQC report
 	- Compleasm
 	- PSAURON (Annotation assessment tool)
 	- OMArk (Genome annotation evaluation)
-	- (Upcoming) MultiQC (Summarizing QC reports)
+	- MultiQC (Summarizing QC reports)
 
 ## Input Requirements
 Specified in workflow/config_path.yaml:
